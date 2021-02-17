@@ -6,7 +6,7 @@
 #include "decode_application_template_entry_tlv.h"
 
 /***************************internal data*******************************/
-const uint8_t* Command_APDUs_str[]={
+const char* Command_APDUs_str[]={
         "SELECT FILE",
         "STATUS",
         "READ BINARY",
