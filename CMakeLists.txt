@@ -12,7 +12,7 @@ if(${platform} STREQUAL Linux)
 elseif(${platform} STREQUAL "Windows")
     set(interface_files ${interface_files} usim_if_windows.c usim_if_windows.h)
 else()
-    set(interface_files ${interface_files} usim_if_noPCSC.c usim_if_noPCSC.h decode_application_template_entry_tlv.c decode_application_template_entry_tlv.h)
+    set(interface_files ${interface_files} usim_if_noPCSC.c usim_if_noPCSC.h)
 endif()
 
 file(GLOB decode_file decode_*_tlv.*)
