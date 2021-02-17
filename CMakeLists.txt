@@ -28,7 +28,10 @@ add_executable(USIM_demo
         )
 
 if(${platform} STREQUAL Linux)
-target_link_libraries(USIM_demo
-        -lpcsclite)
+    target_link_libraries(USIM_demo
+            -lpcsclite)
+elseif(${platform} STREQUAL Windows)
+    target_link_libraries(USIM_demo
+            -lwinscard)
 endif()
 

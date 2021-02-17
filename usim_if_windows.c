@@ -16,14 +16,14 @@ int init_scard()
 
     rv = SCardEstablishContext(SCARD_SCOPE_SYSTEM, NULL, NULL, &hContext);
     if (rv != SCARD_S_SUCCESS){
-        printf("Failed at line %d with %s (0x%lX)\n", __LINE__, pcsc_stringify_error(rv), rv); \
+        printf("Failed at line %d\n", __LINE__);
         return 0;
     }
 
     dwReaders = SCARD_AUTOALLOCATE;
     rv = SCardListReaders(hContext, NULL, (LPSTR)&mszReaders, &dwReaders);
     if (rv != SCARD_S_SUCCESS){
-        printf("Failed at line %d with %s (0x%lX)\n", __LINE__, pcsc_stringify_error(rv), rv); \
+        printf("Failed at line %d\n", __LINE__);
         return 0;
     }
 
@@ -34,7 +34,7 @@ int init_scard()
                       SCARD_SHARE_DIRECT, SCARD_PROTOCOL_T0 | SCARD_PROTOCOL_T1,
                       &hCard, &dwPref);
     if (rv != SCARD_S_SUCCESS){
-        printf("Failed at line %d with %s (0x%lX)\n", __LINE__, pcsc_stringify_error(rv), rv); \
+        printf("Failed at line %d\n", __LINE__);
         return 0;
     }
     SCardFreeMemory(hContext, mszReaders);
