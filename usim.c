@@ -3,6 +3,7 @@
 //
 
 #include "usim.h"
+#include "decode_application_template_entry_tlv.h"
 
 /***************************internal data*******************************/
 const uint8_t* Command_APDUs_str[]={
@@ -62,6 +63,7 @@ static apdu_t* _new_apdu_command(
 static int _send_apdu(usim_t* usim,r_apdu_t* r_apdu_p /* out */);
 static void _decode_status_words(uint8_t sw1,uint8_t sw2);
 static void _display_one_apdu(apdu_t* apdu_p);
+static int _activate_usim_app(usim_t* usim);
 
 /*
  * create a apdu command and return a pointer type of apdu_t
@@ -427,6 +429,55 @@ static void _display_one_apdu(apdu_t* apdu_p)
     printf("\n");
 }
 
+static int _activate_usim_app(usim_t* usim)
+{
+    r_apdu_t r_apdu;
+    //SELECT EFdir
+    uint8_t EFDIR[2]={0x2F,0x00};
+    send_command_usim(usim,0x00,0xA4,0x00,0x04,0x02,EFDIR,
+                      INVALID_LE,&r_apdu);
+    release_r_apdu(&r_apdu);
+
+    //SEARCH RECORD
+    uint8_t usim_identity[9]={0xA0,0x00,0x00,0x00,
+                          0x87,0x10,0x02,0xFF,0x86};
+    send_command_usim(usim,0x00,0xA2,0x01,0x04,sizeof(usim_identity),usim_identity,
+                      0x01,&r_apdu);
+    if(r_apdu.r_apdu_size == 0){
+        printf("No find USIM App,activate USIM App failure.\n");
+        return 0;
+    }
+    uint8_t usim_record_id = r_apdu.r_apdu[0];
+    release_r_apdu(&r_apdu);
+
+    //READ RECORD
+    send_command_usim(usim,0x00,0xB2,usim_record_id,0x04,INVALID_LC,NULL,
+                      0x00,&r_apdu);
+    //DECODE APP TEMPLATE ENTRY
+    app_temp_entry_t* app_temp_entry_p = decode_application_template_entry_tlv(r_apdu.r_apdu);
+    if(app_temp_entry_p == NULL)
+    {
+        release_r_apdu(&r_apdu);
+        return 0;
+    }
+    else
+    {
+        release_r_apdu(&r_apdu);
+        if(0 == send_command_usim(usim,0x00,0xA4,0x04,0x04,
+                          app_temp_entry_p->aid_size,app_temp_entry_p->aid,
+                          INVALID_LE,&r_apdu))
+        {
+            release_application_template_entry(&app_temp_entry_p);
+            release_r_apdu(&r_apdu);
+            return 0;
+        }
+        release_application_template_entry(&app_temp_entry_p);
+        release_r_apdu(&r_apdu);
+    }
+
+    return 1;
+}
+
 /***************************global functions*****************************/
 void init_usim(usim_t* usim ,
                int (* send_apdu_usim)(uint8_t*,uint8_t),...)
@@ -437,6 +488,7 @@ void init_usim(usim_t* usim ,
     usim->send_apdu_usim = send_apdu_usim;
     usim->history_pool = init_history_pool(10);
     assert(usim->history_pool != NULL);
+    _activate_usim_app(usim);
 }
 
 void release_usim(usim_t* usim)
@@ -474,5 +526,6 @@ void release_r_apdu(r_apdu_t* r_apdu_p)
 {
     assert(r_apdu_p != NULL);
     if(r_apdu_p->r_apdu) free(r_apdu_p->r_apdu);
+    r_apdu_p->r_apdu = NULL;
     r_apdu_p->r_apdu_size = 0;
 }

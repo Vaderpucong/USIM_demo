@@ -6,19 +6,16 @@ set(platform "Linux")
 set(interface_files "")
 
 if(${platform} STREQUAL Linux)
-    #find_package(pcsclite)
-    #message(pcsclite_DIR:${pcsclite_DIR})
     include_directories(/usr/include/PCSC)
     set(interface_files ${interface_files} usim_if_linux.c usim_if_linux.h)
     set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} -g)
 elseif(${platform} STREQUAL "Windows")
     set(interface_files ${interface_files} usim_if_windows.c usim_if_windows.h)
 else()
-    set(interface_files ${interface_files} usim_if_noPCSC.c usim_if_noPCSC.h)
+    set(interface_files ${interface_files} usim_if_noPCSC.c usim_if_noPCSC.h decode_application_template_entry_tlv.c decode_application_template_entry_tlv.h)
 endif()
 
-message(platform:${platform})
-message(interface_files:${interface_files})
+file(GLOB decode_file decode_*_tlv.*)
 
 add_executable(USIM_demo
         main.c
@@ -27,8 +24,11 @@ add_executable(USIM_demo
         history.c
         history.h
         ${interface_files}
+        ${decode_file}
         )
 
+if(${platform} STREQUAL Linux)
 target_link_libraries(USIM_demo
         -lpcsclite)
+endif()
 
