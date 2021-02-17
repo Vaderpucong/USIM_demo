@@ -13,7 +13,7 @@ int main(int argc , char** argv)
     init_usim(&usim ,send_apdu_usim);
 
     /* test case
-     * select IMSI FE
+     * select IMSI EF
      * read IMSI EF
      */
     uint8_t imsi[2]={0x6F,0x07};
