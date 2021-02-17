@@ -5,6 +5,48 @@
 #include "usim.h"
 
 /***************************internal data*******************************/
+uint8_t Command_APDUs_str[]={
+        "SELECT FILE",
+        "STATUS",
+        "READ BINARY",
+        "UPDATE BINARY",
+        "READ RECORD",
+        "UPDATE RECORD",
+        "SEARCH RECORD",
+        "INCREASE",
+        "RETRIEVE DATA",
+        "SET DATA",
+        "VERIFY PIN",
+        "CHANGE PIN",
+        "DISABLE PIN",
+        "ENABLE PIN",
+        "UNBLOCK PIN",
+        "DEACTIVATE FILE",
+        "ACTIVATE FILE",
+        "AUTHENTICATE",
+        "AUTHENTICATE",
+        "GET CHALLENGE",
+        "TERMINAL CAPABILITY",
+        "TERMINAL PROFILE",
+        "ENVELOPE",
+        "FETCH",
+        "TERMINAL RESPONSE",
+        "MANAGE CHANNEL",
+        "MANAGE SECURE CHANNEL",
+        "TRANSACT DATA",
+        "SUSPEND UICC",
+        "GET IDENTITY",
+        "EXCHANGE CAPABILITIES",
+        "GET RESPONSE",
+};
+uint8_t Command_APDUs_id[]={0xA4,0xF2,0xB0,0xD6,
+                            0xB2,0xDC,0xA2,0x32,
+                            0xCB,0xDB,0x20,0x24,
+                            0x26,0x28,0x2C,0x04,
+                            0x44,0x88,0x89,0x84,
+                            0xAA,0x10,0xC2,0x12,
+                            0x14,0x70,0x73,0x75,
+                            0x76,0x78,0x7A,0xC0};
 
 
 
@@ -116,6 +158,237 @@ static int _send_apdu(usim_t* usim,r_apdu_t* r_apdu_p /* out */)
             break;
     }
     return 1;
+}
+
+static void decode_status_words(uint8_t sw1,uint8_t sw2)
+{
+    switch(sw1)
+    {
+        //normal processing
+        case 0x90:
+        case 0x91:
+        case 0x92:
+            printf("Normal processing:");
+            printf("Normal ending of the command.\n");
+            break;
+        //postponed processing
+        case 0x93:
+            printf("Postponed processing:");
+            printf("SIM Application Toolkit is busy. "
+                   "Command cannot be executed at present, further "
+                   "normal commands are allowed.\n");
+            break;
+        //warnings
+        case 0x62:
+            printf("Warning:");
+            switch(sw2)
+            {
+                case 0x00:
+                    printf("No information given, "
+                           "state of non-volatile memory unchanged.\n");
+                    break;
+                case 0x81:
+                    printf("Part of returned data may be corrupted.\n");
+                    break;
+                case 0x82:
+                    printf("End of file/record reached before "
+                           "reading Le bytes or unsuccessful search.\n");
+                    break;
+                case 0x83:
+                    printf("Selected file invalidated.\n");
+                    break;
+                case 0x85:
+                    printf("Selected file in termination state.\n");
+                    break;
+                case 0xF1:
+                    printf("More data available.\n");
+                    break;
+                case 0xF2:
+                    printf("More data available and proactive command pending.\n");
+                    break;
+                case 0xF3:
+                    printf("Response data available.\n");
+                    break;
+            }
+            break;
+        case 0x63:
+            printf("Warning:");
+            switch(sw2)
+            {
+                case 0xF1:
+                    printf("More data expected.\n");
+                    break;
+                case 0xF2:
+                    printf("More data expected and proactive command pending.\n");
+                    break;
+                default:
+                    if(sw2>>4 == 0xCu)
+                        printf("Command successful but after using an internal update retry routine %u times\n"
+                               "or Verification failed, %u retries remaining" , sw2&0x0Fu,sw2&0x0Fu);
+                    break;
+            }
+            break;
+        //execution errors
+        case 0x64:
+            printf("Execution errors:");
+            printf("No information given, state of non-volatile memory unchanged.\n");
+            break;
+        case 0x65:
+            printf("Execution errors:");
+            switch(sw2)
+            {
+                case 0x00:
+                    printf("No information given, state of non-volatile memory changed.\n");
+                    break;
+                case 0x81:
+                    printf("Memory problem.\n");
+                    break;
+            }
+            break;
+        //checking errors
+        case 0x67:
+            printf("Checking errors:");
+            switch(sw2)
+            {
+                case 0x00:
+                    printf("Wrong length.\n");
+                    break;
+                default:
+                    printf("The interpretation of this status "
+                           "word is command dependent.\n");
+                    break;
+            }
+            break;
+        case 0x6B:
+            printf("Checking errors:");
+            printf("Wrong parameter(s) P1-P2.\n");
+            break;
+        case 0x6D:
+            printf("Checking errors:");
+            printf("Instruction code not supported or invalid.\n");
+            break;
+        case 0x6E:
+            printf("Checking errors:");
+            printf("Class not supported.\n");
+            break;
+        case 0x6F:
+            printf("Checking errors:");
+            switch(sw2)
+            {
+                case 0x00:
+                    printf("Technical problem, no precise diagnosis.\n");
+                    break;
+                default:
+                    printf("The interpretation of this status word is command dependent.\n");
+                    break;
+            }
+            break;
+        //functions in CLA not supported
+        case 0x68:
+            printf("Functions in CLA not supported:");
+            switch (sw2)
+            {
+                case 0x00:
+                    printf("No information given.\n");
+                    break;
+                case 0x81:
+                    printf("Logical channel not supported.\n");
+                    break;
+                case 0x82:
+                    printf("Secure messaging not supported.\n");
+                    break;
+            }
+        //command not allowed
+        case 0x69:
+            printf("Command not allowed:");
+            switch (sw2)
+            {
+                case 0x00:
+                    printf("No information given.\n");
+                    break;
+                case 0x81:
+                    printf("Command incompatible with file structure.\n");
+                    break;
+                case 0x82:
+                    printf("Security status not satisfied.\n");
+                    break;
+                case 0x83:
+                    printf("Authentication/PIN method blocked.\n");
+                    break;
+                case 0x84:
+                    printf("Referenced data invalidated.\n");
+                    break;
+                case 0x85:
+                    printf("Conditions of use not satisfied.\n");
+                    break;
+                case 0x86:
+                    printf("Command not allowed (no EF selected).\n");
+                    break;
+                case 0x89:
+                    printf("Command not allowed - secure channel - security not satisfied.\n");
+                    break;
+            }
+            break;
+        //wrong parameters
+        case 0x6A:
+            printf("Wrong parameters:");
+            switch(sw2)
+            {
+                case 0x80:
+                    printf("Incorrect parameters in the data field.\n");
+                    break;
+                case 0x81:
+                    printf("Function not supported.\n");
+                    break;
+                case 0x82:
+                    printf("File not found.\n");
+                    break;
+                case 0x83:
+                    printf("Record not found.\n");
+                    break;
+                case 0x84:
+                    printf("Not enough memory space.\n");
+                    break;
+                case 0x86:
+                    printf("Incorrect parameters P1 to P2.\n");
+                    break;
+                case 0x87:
+                    printf("Lc inconsistent with P1 to P2.\n");
+                    break;
+                case 0x88:
+                    printf("Referenced data not found.\n");
+                    break;
+            }
+            break;
+        //application errors
+        case 0x98:
+            printf("Application errors:");
+            switch (sw2)
+            {
+                case 0x50:
+                    printf("INCREASE cannot be performed, max value reached.\n");
+                    break;
+                case 0x62:
+                    printf("Authentication error, incorrect MAC.\n");
+                    break;
+                case 0x63:
+                    printf("Security session or association expired.\n");
+                    break;
+                case 0x64:
+                    printf("Minimum UICC suspension time is too long or "
+                           "Authentication error, security context not supported.\n");
+                    break;
+                case 0x65:
+                    printf("Key freshness failure.\n");
+                    break;
+                case 0x66:
+                    printf("Authentication error, no memory space available.\n");
+                    break;
+                case 0x67:
+                    printf("Authentication error, no memory space available in EFMUK.\n");
+                    break;
+            }
+    }
 }
 
 
