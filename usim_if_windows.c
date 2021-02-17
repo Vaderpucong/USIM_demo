@@ -44,4 +44,20 @@ int init_scard()
 void release_scard()
 {
     SCardReleaseContext(hContext);
+    SCardDisconnect	(hCard,SCARD_RESET_CARD);
+}
+
+int send_apdu_usim(uint8_t* apdu_p , uint8_t apdu_size)
+{
+    LONG rv=0;
+    memset(&r_tpdu,0,sizeof(struct r_tpdu_s));
+    r_tpdu.r_tpdu_size = sizeof(r_tpdu.r_tpdu);
+    rv = SCardTransmit(hCard,SCARD_PCI_RAW,apdu_p,apdu_size,
+                       NULL,r_tpdu.r_tpdu,(LPDWORD)&r_tpdu.r_tpdu_size);
+    if (rv != SCARD_S_SUCCESS){
+        printf("Failed at line %d\n", __LINE__);
+        return 0;
+    }
+
+    return 1;
 }
