@@ -35,7 +35,7 @@ typedef struct apdu{
 }apdu_t;
 
 #define GTE_APDU_HEAD(t) ((uint8_t*)&(t->CLA))
-#define GTE_APDU_LE(t) (*(GTE_APDU_HEAD(t)+t->apdu_size-1))
+#define GTE_APDU_LE(t) (t->has_Le==_HAS_LE?*(GTE_APDU_HEAD(t)+t->apdu_size-1):0x100u)
 
 typedef struct usim_s{
     int (* send_apdu_usim)(uint8_t*,uint8_t);

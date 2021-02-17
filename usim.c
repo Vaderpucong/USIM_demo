@@ -5,7 +5,7 @@
 #include "usim.h"
 
 /***************************internal data*******************************/
-uint8_t Command_APDUs_str[]={
+const uint8_t* Command_APDUs_str[]={
         "SELECT FILE",
         "STATUS",
         "READ BINARY",
@@ -51,6 +51,18 @@ uint8_t Command_APDUs_id[]={0xA4,0xF2,0xB0,0xD6,
 
 
 /***************************internal functions*******************************/
+static apdu_t* _new_apdu_command(
+        uint8_t cla,
+        uint8_t ins,
+        uint8_t p1,
+        uint8_t p2,
+        uint8_t lc,
+        uint8_t* data,
+        uint8_t le);
+static int _send_apdu(usim_t* usim,r_apdu_t* r_apdu_p /* out */);
+static void _decode_status_words(uint8_t sw1,uint8_t sw2);
+static void _display_one_apdu(apdu_t* apdu_p);
+
 /*
  * create a apdu command and return a pointer type of apdu_t
  * no need to pass data size ,because lc equal data size
@@ -92,13 +104,14 @@ static apdu_t* _new_apdu_command(
 static int _send_apdu(usim_t* usim,r_apdu_t* r_apdu_p /* out */)
 {
     apdu_t* _apdu_p = (apdu_t*)get_latest_item(usim->history_pool);
+    _display_one_apdu(_apdu_p);
     if(0 == usim->send_apdu_usim(GTE_APDU_HEAD(_apdu_p),_apdu_p->apdu_size))
         return 0;
     switch(r_tpdu.r_tpdu[r_tpdu.r_tpdu_size-2]) //SW1
     {
         case 0x61: {
             //send GET RESPONSE command
-            uint8_t _xx = GTE_APDU_LE(_apdu_p)<r_tpdu.r_tpdu[r_tpdu.r_tpdu_size - 1]?
+            uint8_t _xx = GTE_APDU_LE(_apdu_p) < r_tpdu.r_tpdu[r_tpdu.r_tpdu_size - 1]?
                          GTE_APDU_LE(_apdu_p):r_tpdu.r_tpdu[r_tpdu.r_tpdu_size - 1];
 
             insert_history_item(usim->history_pool,
@@ -132,11 +145,14 @@ static int _send_apdu(usim_t* usim,r_apdu_t* r_apdu_p /* out */)
         case 0x63:
         case 0x91:
         case 0x92:
-            //Case4
+            //for Case4
             if(_apdu_p->has_Lc == _HAS_LC &&
                 _apdu_p->has_Le == _HAS_LE)
             {
                 //decode status words
+                _decode_status_words(r_tpdu.r_tpdu[r_tpdu.r_tpdu_size-2],
+                                     r_tpdu.r_tpdu[r_tpdu.r_tpdu_size-1]);
+                //_display_one_apdu(_apdu_p);
                 insert_history_item(usim->history_pool,
                                     (uint8_t *) _new_apdu_command(0x00, 0xC0,
                                                                   0x00, 0x00,
@@ -149,10 +165,13 @@ static int _send_apdu(usim_t* usim,r_apdu_t* r_apdu_p /* out */)
             }
         default:
             //decode status words
+            _decode_status_words(r_tpdu.r_tpdu[r_tpdu.r_tpdu_size-2],
+                                 r_tpdu.r_tpdu[r_tpdu.r_tpdu_size-1]);
+            //_display_one_apdu(_apdu_p);
             assert(r_apdu_p != NULL);
             memset(r_apdu_p , 0 , sizeof(r_apdu_t));
-            r_apdu_p->r_apdu_size = r_tpdu.r_tpdu_size;
-            r_apdu_p->r_apdu = (uint8_t*)malloc(r_tpdu.r_tpdu_size);
+            r_apdu_p->r_apdu_size = r_tpdu.r_tpdu_size - 2; //substrate SW1|SW2
+            r_apdu_p->r_apdu = (uint8_t*)malloc(r_apdu_p->r_apdu_size);
             assert(r_apdu_p->r_apdu != NULL);
             memcpy(r_apdu_p->r_apdu, r_tpdu.r_tpdu , r_apdu_p->r_apdu_size);
             break;
@@ -160,7 +179,7 @@ static int _send_apdu(usim_t* usim,r_apdu_t* r_apdu_p /* out */)
     return 1;
 }
 
-static void decode_status_words(uint8_t sw1,uint8_t sw2)
+static void _decode_status_words(uint8_t sw1,uint8_t sw2)
 {
     switch(sw1)
     {
@@ -391,6 +410,22 @@ static void decode_status_words(uint8_t sw1,uint8_t sw2)
     }
 }
 
+static void _display_one_apdu(apdu_t* apdu_p)
+{
+    printf("|0x%02X-0x%02X-0x%02X-0x%02X|",apdu_p->CLA,apdu_p->INC,apdu_p->P1,apdu_p->P2);
+    uint8_t data_size=0;
+    if(apdu_p->has_Lc){
+        printf("0x%02X|0x",apdu_p->Lc_data_Le[0]);
+        data_size = apdu_p->apdu_size - 4 -apdu_p->has_Lc - apdu_p->has_Le;
+        for(uint8_t i=0;i<data_size;++i)
+            printf("%02X",apdu_p->Lc_data_Le[1+i]);
+        printf("|");
+    }
+
+    if(apdu_p->has_Le)
+        printf("0x%02X|",apdu_p->Lc_data_Le[apdu_p->has_Lc+data_size]);
+    printf("\n");
+}
 
 /***************************global functions*****************************/
 void init_usim(usim_t* usim ,
@@ -430,6 +465,7 @@ int send_command_usim(usim_t* usim,
                         NULL);
     if(0 == _send_apdu(usim,r_apdu))
         return 0;
+    printf("======================================.\n");
 
     return 1;
 }
