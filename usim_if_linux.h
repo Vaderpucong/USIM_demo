@@ -9,7 +9,7 @@
 #include "commondef.h"
 
 struct r_tpdu_s{
-    uint8_t r_tpdu[256+2];
+    uint8_t r_tpdu[600];
     uint16_t r_tpdu_size;
 }r_tpdu;
 

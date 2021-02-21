@@ -45,6 +45,8 @@ typedef struct usim_s{
 typedef struct r_apdu_s{
     uint8_t* r_apdu;
     uint16_t r_apdu_size;
+    uint8_t sw1;
+    uint8_t sw2;
 }r_apdu_t;
 
 

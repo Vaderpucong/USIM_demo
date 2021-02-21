@@ -176,6 +176,8 @@ static int _send_apdu(usim_t* usim,r_apdu_t* r_apdu_p /* out */)
             r_apdu_p->r_apdu = (uint8_t*)malloc(r_apdu_p->r_apdu_size);
             assert(r_apdu_p->r_apdu != NULL);
             memcpy(r_apdu_p->r_apdu, r_tpdu.r_tpdu , r_apdu_p->r_apdu_size);
+            r_apdu_p->sw1 = r_tpdu.r_tpdu[r_tpdu.r_tpdu_size-2];
+            r_apdu_p->sw2 = r_tpdu.r_tpdu[r_tpdu.r_tpdu_size-1];
             break;
     }
     return 1;
@@ -456,6 +458,7 @@ static int _activate_usim_app(usim_t* usim)
     app_temp_entry_t* app_temp_entry_p = decode_application_template_entry_tlv(r_apdu.r_apdu);
     if(app_temp_entry_p == NULL)
     {
+        printf("%s-%d Error: decode AID TLV failure.\n",__FILE__,__LINE__);
         release_r_apdu(&r_apdu);
         return 0;
     }
@@ -466,10 +469,15 @@ static int _activate_usim_app(usim_t* usim)
                           app_temp_entry_p->aid_size,app_temp_entry_p->aid,
                           INVALID_LE,&r_apdu))
         {
+            printf("%s-%d Error: send command to usim failure.\n",__FILE__,__LINE__);
             release_application_template_entry(&app_temp_entry_p);
             release_r_apdu(&r_apdu);
             return 0;
         }
+        if(r_apdu.sw1 == 0x90)
+            printf("Activate USIM App successfully.\n");
+        else
+            printf("Activate USIM App unsuccessfully.\n");
         release_application_template_entry(&app_temp_entry_p);
         release_r_apdu(&r_apdu);
     }

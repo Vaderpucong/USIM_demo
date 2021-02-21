@@ -76,11 +76,11 @@ re_decode:
         }
         if(hasLe && (apdu_p[apdu_size-1] != 0)
         && (res_size-2-1)>apdu_p[apdu_size-1]) //if apdu_size > Le , return Le bytes of data
-            r_tpdu_size = apdu_p[apdu_size-1];
+            r_tpdu.r_tpdu_size = apdu_p[apdu_size-1]+2;
         else
-            r_tpdu_size = res_size-2-1;
-        memset(r_tpdu , 0 , sizeof(r_tpdu));
-        memcpy(r_tpdu,response_data+1,r_tpdu_size);
+            r_tpdu.r_tpdu_size = res_size-1;
+        memset(r_tpdu.r_tpdu , 0 , sizeof(r_tpdu.r_tpdu));
+        memcpy(r_tpdu.r_tpdu,response_data+1,r_tpdu.r_tpdu_size);
     }
     else if(res_size == 1 && response_data[0]==apdu_p[1]) // return INS
     {
@@ -96,9 +96,9 @@ re_decode:
     }
     else if(res_size == 2) //only SW1 SW2
     {
-        r_tpdu_size = res_size;
-        memset(r_tpdu , 0 , sizeof(r_tpdu));
-        memcpy(r_tpdu,response_data,r_tpdu_size);
+        r_tpdu.r_tpdu_size = res_size;
+        memset(r_tpdu.r_tpdu , 0 , sizeof(r_tpdu.r_tpdu));
+        memcpy(r_tpdu.r_tpdu,response_data,r_tpdu.r_tpdu_size);
     }
     else
     {
