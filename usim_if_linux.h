@@ -9,9 +9,18 @@
 #include "commondef.h"
 
 struct r_tpdu_s{
-    uint8_t r_tpdu[256];
+    uint8_t r_tpdu[256+2];
     uint16_t r_tpdu_size;
 }r_tpdu;
+
+/*
+typedef struct response_s{
+    uint8_t SW1;
+    uint8_t SW2;
+    uint8_t data_len;
+    uint8_t *data;
+}RESPONSE_T, *RESPONSE_P;
+*/
 
 int init_scard();
 void release_scard();

@@ -439,8 +439,7 @@ static int _activate_usim_app(usim_t* usim)
     release_r_apdu(&r_apdu);
 
     //SEARCH RECORD
-    uint8_t usim_identity[9]={0xA0,0x00,0x00,0x00,
-                          0x87,0x10,0x02,0xFF,0x86};
+    uint8_t usim_identity[]={0xA0,0x00,0x00,0x00,0x87,0x10,0x02};
     send_command_usim(usim,0x00,0xA2,0x01,0x04,sizeof(usim_identity),usim_identity,
                       0x01,&r_apdu);
     if(r_apdu.r_apdu_size == 0){
